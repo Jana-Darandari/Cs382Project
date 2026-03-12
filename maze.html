@@ -75,6 +75,8 @@
     <div class="game-wrapper" id="main-wrapper">
         <div class="hud">
             <div id="status-display">Stage: 1 / 3</div>
+            <div id="points-display">Score: 0</div>
+            <div id="timer-display">Time: <span id="time-val" style="color: #fff;">60</span>s</div>
             <div id="score-display">System: <span style="color: var(--danger);">Offline</span></div>
         </div>
 
@@ -85,13 +87,23 @@
 
         <div class="controls">
             <button class="btn" id="btn-reset">Reset Wires</button>
-            <button class="btn" onclick="window.location.href='index.html?stage=2'">Return to Story</button>
+            <button class="btn" id="btn-return">Return to Story</button>
         </div>
     </div>
 
     <script src="shared.js"></script>
 
     <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        let playerName = urlParams.get('name') || 'Operator';
+        let currentScore = parseInt(urlParams.get('score')) || 0; 
+        
+        $('#points-display').text(`Score: ${currentScore}`);
+        
+        $('#btn-return').click(() => {
+            window.location.href = `index.html?stage=2&name=${encodeURIComponent(playerName)}&score=${currentScore}`;
+        });
+
         const colors = {
             red: '#ff0000', blue: '#00ccff', green: '#00ff00',
             yellow: '#ffff00', purple: '#9900ff', pink: '#ff00ff', orange: '#ff9900'
@@ -139,11 +151,14 @@
         let paths = {}; 
         let activeColor = null;
         let isDragging = false;
+        
+        // ADDED: Timer Variables
+        let timerInterval;
+        let timeLeft = 60;
 
         function loadLevel(index) {
             if (index >= levels.length) {
-                // THE CRITICAL FIX: Tell index.html we are now on Stage 3 (The End)
-                window.location.href = 'index.html?stage=3';
+                window.location.href = `index.html?stage=3&name=${encodeURIComponent(playerName)}&score=${currentScore}`;
                 return;
             }
 
@@ -164,6 +179,28 @@
             });
 
             renderBoard();
+            
+            // ADDED: Start/Reset Timer per level
+            clearInterval(timerInterval);
+            timeLeft = 60;
+            $('#time-val').text(timeLeft).css('color', '#fff'); // Reset to white
+            
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                $('#time-val').text(timeLeft);
+                
+                // Turn timer red when time is running out (10s or less)
+                if (timeLeft <= 10) {
+                    $('#time-val').css('color', 'var(--danger)');
+                }
+                
+                // Fail state if time runs out
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    // Send to Fail Hub
+                    window.location.href = `index.html?stage=fail&name=${encodeURIComponent(playerName)}&score=${currentScore}`;
+                }
+            }, 1000);
         }
 
         function getDotAt(r, c) {
@@ -270,6 +307,12 @@
                 if (!(match1 || match2)) { won = false; break; }
             }
             if (won) {
+                // ADDED: Stop the timer when you beat the stage!
+                clearInterval(timerInterval);
+                
+                currentScore += 200;
+                $('#points-display').text(`Score: ${currentScore}`);
+
                 $('#score-display').html(`System: <span style="color: #4CAF50;">Online</span>`);
                 $('#game-board').addClass('grid-glow');
                 setTimeout(() => {
