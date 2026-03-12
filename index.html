@@ -113,12 +113,10 @@
         let playerScore = urlParams.get('score') || 0;
         let currentStage = urlParams.get('stage') || '1'; 
 
-        // CHECK IF NAME IS PROVIDED
         if (!playerName) {
             $('#login-screen').show();
         } else {
             $('#dialogue-box').show();
-            // Don't show the inventory bar if they failed
             if (currentStage !== 'fail') $('#inv-wrapper').show();
             runStory();
         }
@@ -133,16 +131,26 @@
             let storyLines = [];
             let nextAction = {};
 
+            // STAGE 1: Cipher Game
             if (currentStage === '1') {
                 storyLines = ["I finally made it inside the tent.", "The laser grid is active. One wrong move and the alarms will trigger.", "There's a terminal over there. I need to decrypt its cipher to get the map."];
                 nextAction = { text: "Access Terminal", url: `cipher.html?name=${encodeURIComponent(playerName)}&score=${playerScore}` };
             
+            // STAGE 2: Camel Maze
             } else if (currentStage === '2') {
                 $('#inv-map').addClass('collected'); 
-                storyLines = ["Got it. The map coordinates are locked in.", "They point directly to the main vault doors...", "...but the power grid is completely scrambled.", "I need to reroute the colored energy nodes without crossing the wires to restore power."];
+                storyLines = ["Got it. The map coordinates are locked in.", "But the vault is hidden deep within the desert catacombs.", "I need to navigate the shifting sands to reach the entrance."];
+                nextAction = { text: "Enter the Dunes", url: `mazes.html?name=${encodeURIComponent(playerName)}&score=${playerScore}` };
+
+            // STAGE 3: Power Grid
+            } else if (currentStage === '3') {
+                $('#inv-map').addClass('collected');
+                $('#inv-key').addClass('collected'); 
+                storyLines = ["I made it across the sands. The heavy vault doors are right in front of me.", "...but the power grid is completely scrambled.", "I need to reroute the colored energy nodes without crossing the wires to restore power."];
                 nextAction = { text: "Access Power Grid", url: `maze.html?name=${encodeURIComponent(playerName)}&score=${playerScore}` };
 
-            } else if (currentStage === '3') {
+            // STAGE 4: Win Screen
+            } else if (currentStage === '4') {
                 $('#inv-map').addClass('collected');
                 $('#inv-key').addClass('collected'); 
                 setTimeout(() => $('#inv-diamond').addClass('collected'), 1000); 
@@ -150,6 +158,7 @@
                 storyLines = ["The power grid is online. The heavy stone doors are opening.", "There it is. The Desert Gem.", "The secrets of the sands are finally mine."];
                 nextAction = { text: "Complete Mission", url: "SHOW_SUCCESS" };
             
+            // FAIL STATE
             } else if (currentStage === 'fail') {
                 storyLines = ["WARNING: SYSTEM LOCKOUT.", "Security breach detected. Terminal Access Denied.", "The alarms have been triggered. I need to get out of here!"];
                 nextAction = { text: "View Mission Report", url: "SHOW_FAIL" };
@@ -198,8 +207,6 @@
                         
                         } else if (nextAction.url === "SHOW_FAIL") {
                             $('#dialogue-box').fadeOut(400);
-                            
-                            // CHANGE COLORS TO RED FOR FAIL
                             $('#result-screen').css('border-color', 'var(--danger)').css('box-shadow', '0 0 30px rgba(204, 51, 51, 0.8)');
                             $('#result-title').text("System Locked").css('color', 'var(--danger)');
                             $('#result-desc').html(`Mission Failed, <span style="color: var(--danger); font-weight: bold;">${playerName}</span>.<br>Security measures were triggered. You have been locked out.`);
@@ -220,7 +227,6 @@
             });
         }
 
-        // SHOW DASHBOARD AFTER RESULT
         function revealDashboard() {
             $('#result-screen').fadeOut(400);
             $('#dash-name').text(playerName);
@@ -228,9 +234,9 @@
             setTimeout(() => {
                 $('#final-dashboard').fadeIn(500);
                 if(currentStage === 'fail') {
-                    $('#progress-bar').css('width', '20%'); // Red small bar
+                    $('#progress-bar').css('width', '20%'); 
                 } else {
-                    $('#progress-bar').css('width', '100%'); // Full orange bar
+                    $('#progress-bar').css('width', '100%'); 
                 }
             }, 500);
         }

@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Desert Vault - Danger Maze</title>
+    
+    <link rel="stylesheet" href="shared.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <style>
+        .hud {
+            display: flex; justify-content: space-between;
+            font-size: 18px; font-weight: bold;
+            border-bottom: 1px dashed var(--primary);
+            padding-bottom: 15px; margin-bottom: 10px;
+        }
+
+        #sys-display {
+            text-align: center; font-size: 18px; font-weight: bold; margin-bottom: 20px;
+        }
+
+        #maze-instructions {
+            margin-bottom: 20px; font-style: italic; opacity: 0.8;
+            max-width: 600px; margin-left: auto; margin-right: auto;
+        }
+
+        #maze-board {
+            display: grid;
+            gap: 2px;
+            background-color: rgba(212, 136, 51, 0.4); 
+            border: 2px solid var(--primary);
+            margin: 0 auto 30px auto;
+            width: max-content;
+            box-shadow: 0 0 20px rgba(212, 136, 51, 0.2);
+            user-select: none; 
+        }
+
+        .maze-cell {
+            width: 45px; height: 45px;
+            background-color: rgba(26, 18, 12, 0.95);
+            position: relative;
+        }
+
+        /* Wall Texture */
+        .wall {
+            background-color: var(--primary);
+            background-image: url('data:image/svg+xml;utf8,<svg width="10" height="10" xmlns="http://www.w3.org/2000/svg"><rect width="10" height="10" fill="none"/><circle cx="5" cy="5" r="1" fill="%231a120c"/></svg>');
+            opacity: 0.8;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
+        }
+
+        /* Entity Positioning */
+        .entity {
+            position: absolute; top: 0; left: 0;
+            width: 100%; height: 100%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 30px;
+            transition: all 0.1s ease;
+        }
+
+        .player { animation: walk 0.4s infinite alternate; z-index: 20; }
+        @keyframes walk {
+            0% { transform: translateY(0px) rotate(-5deg); }
+            100% { transform: translateY(-4px) rotate(5deg); }
+        }
+
+        .enemy { filter: drop-shadow(0 0 5px red); z-index: 15; }
+        
+        .goal { animation: pulse 1.5s infinite alternate; z-index: 10; filter: drop-shadow(0 0 10px #4CAF50); }
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 0.8; }
+            100% { transform: scale(1.2); opacity: 1; }
+        }
+
+        /* The Collectable Sparkles */
+        .sparkle { animation: float 1s infinite alternate; z-index: 5; filter: drop-shadow(0 0 5px #ffd280); }
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            100% { transform: translateY(-5px); }
+        }
+
+        .maze-glow { animation: levelComplete 1s ease; }
+        @keyframes levelComplete {
+            0%, 100% { box-shadow: 0 0 20px rgba(212, 136, 51, 0.2); }
+            50% { box-shadow: 0 0 50px #4CAF50; border-color: #4CAF50; }
+        }
+        
+        .death-flash { animation: die 0.5s ease; }
+        @keyframes die {
+            50% { box-shadow: 0 0 50px red; border-color: red; }
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="dust-canvas"></canvas>
+
+    <div class="game-wrapper" id="main-wrapper">
+        <div class="hud">
+            <div id="status-display">Dunes: 1 / 4</div>
+            <div id="sparkles-display" style="color: #ffd280;">✨ 0 / 0</div>
+            <div id="score-display">Score: 0</div>
+            <div id="timer-display">Time: <span id="time-val" style="color: #fff;">60</span>s</div>
+        </div>
+        <div id="sys-display">Navigating...</div>
+
+        <h2 id="level-title">The Shifting Sands</h2>
+        <p id="maze-instructions" style="color: #fff;">
+            Use <strong>Arrow Keys</strong> or <strong>W A S D</strong>.<br>
+            Collect all the <span style="color: #ffd280; font-weight: bold;">✨</span> to unlock the Oasis (🌴).<br>
+            <span style="color: var(--danger);">Avoid the patrolling Snakes (🐍)!</span>
+        </p>
+
+        <div id="maze-board"></div>
+
+        <div class="controls">
+            <button class="btn" id="btn-reset" onclick="location.reload()">Restart Level</button>
+            <button class="btn" id="btn-return">Return to Hub</button>
+        </div>
+    </div>
+
+    <script src="shared.js"></script>
+
+    <script>
+        // GRAB VARIABLES FROM URL
+        const urlParams = new URLSearchParams(window.location.search);
+        let playerName = urlParams.get('name') || 'Operator';
+        let currentScore = parseInt(urlParams.get('score')) || 0; 
+        
+        $('#score-display').text(`Score: ${currentScore}`);
+        
+        $('#btn-return').click(() => {
+            window.location.href = `index.html?stage=2&name=${encodeURIComponent(playerName)}&score=${currentScore}`;
+        });
+
+        // Grid Key: 0 = Sand, 1 = Wall
+        const levels = [
+            { // LEVEL 1: Easy Intro
+                grid: [
+                    [1, 1, 1, 1, 1, 1, 1, 1, 1],
+                    [1, 0, 0, 0, 0, 1, 0, 0, 1],
+                    [1, 0, 1, 1, 0, 1, 0, 1, 1],
+                    [1, 0, 0, 0, 0, 0, 0, 0, 1],
+                    [1, 1, 1, 0, 1, 1, 1, 0, 1],
+                    [1, 0, 0, 0, 0, 0, 0, 0, 1],
+                    [1, 1, 1, 1, 1, 1, 1, 1, 1]
+                ],
+                start: { r: 1, c: 1 }, goal: { r: 5, c: 7 },
+                items: [{ r: 1, c: 7 }, { r: 5, c: 1 }],
+                snakes: [{ r: 3, c: 1, dr: 0, dc: 1 }]
+            },
+            { // LEVEL 2: Snake corridors
+                grid: [
+                    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                    [1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1],
+                    [1, 1, 0, 1, 0, 1, 1, 1, 1, 0, 1],
+                    [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+                    [1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1],
+                    [1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1],
+                    [1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1],
+                    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+                ],
+                start: { r: 1, c: 1 }, goal: { r: 5, c: 9 },
+                items: [{ r: 1, c: 9 }, { r: 7, c: 1 }, { r: 3, c: 6 }],
+                snakes: [
+                    { r: 7, c: 5, dr: 0, dc: 1 }, 
+                    { r: 3, c: 2, dr: 0, dc: 1 },
+                    { r: 5, c: 3, dr: 0, dc: 1 }
+                ]
+            },
+            { // LEVEL 3: Timing is Key
+                grid: [
+                    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                    [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1],
+                    [1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1],
+                    [1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1],
+                    [1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1],
+                    [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1],
+                    [1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1], 
+                    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+                ],
+                start: { r: 1, c: 1 }, goal: { r: 1, c: 9 },
+                items: [{ r: 7, c: 1 }, { r: 7, c: 9 }, { r: 3, c: 9 }, { r: 5, c: 5 }],
+                snakes: [
+                    { r: 5, c: 1, dr: -1, dc: 0 },
+                    { r: 7, c: 5, dr: 0, dc: 1 },
+                    { r: 5, c: 5, dr: 0, dc: 1 },
+                    { r: 3, c: 9, dr: 1, dc: 0 }
+                ]
+            },
+            { // LEVEL 4: 100% Winnable Final Stage
+                grid: [
+                    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                    [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1],
+                    [1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1],
+                    [1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1],
+                    [1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1],
+                    [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1],
+                    [1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 1],
+                    [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1],
+                    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+                ],
+                start: { r: 1, c: 1 }, goal: { r: 7, c: 9 },
+                items: [{ r: 1, c: 9 }, { r: 7, c: 1 }, { r: 3, c: 5 }, { r: 5, c: 1 }],
+                snakes: [
+                    { r: 3, c: 3, dr: 0, dc: 1 }, 
+                    { r: 5, c: 1, dr: 0, dc: 1 }, 
+                    { r: 7, c: 8, dr: 0, dc: -1 }, 
+                    { r: 1, c: 5, dr: 0, dc: 1 }  
+                ]
+            }
+        ];
+
+        let currentLvl = 0;
+        let player = { r: 0, c: 0 };
+        let goal = { r: 0, c: 0 };
+        let activeItems = [];
+        let totalItems = 0;
+        let activeSnakes = [];
+        
+        let isMoving = false;
+        let gameLoop;
+        let isDead = false;
+
+        // TIMER VARIABLES
+        let timerInterval;
+        let timeLeft = 60;
+
+        function loadLevel(index) {
+            if (index >= levels.length) {
+                // SUCCESS: PUSH SCORE TO URL AND GO TO POWER GRID (STAGE 3)
+                window.location.href = `index.html?stage=3&name=${encodeURIComponent(playerName)}&score=${currentScore}`;
+                return;
+            }
+
+            clearInterval(gameLoop);
+            clearInterval(timerInterval);
+            isDead = false;
+            
+            let lvl = levels[index];
+            $('#status-display').text(`Dunes: ${index + 1} / 4`);
+            $('#sys-display').html(`Navigating...`);
+            
+            let rows = lvl.grid.length;
+            let cols = lvl.grid[0].length;
+
+            player = { r: lvl.start.r, c: lvl.start.c };
+            goal = { r: lvl.goal.r, c: lvl.goal.c };
+            
+            activeItems = lvl.items.map(d => ({ ...d }));
+            totalItems = activeItems.length;
+            updateSparklesUI();
+
+            activeSnakes = lvl.snakes.map(s => ({ ...s }));
+
+            $('#maze-board').css({
+                'grid-template-columns': `repeat(${cols}, 45px)`,
+                'grid-template-rows': `repeat(${rows}, 45px)`
+            }).empty();
+
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    let cell = $(`<div class="maze-cell" id="cell-${r}-${c}"></div>`);
+                    if (lvl.grid[r][c] === 1) cell.addClass('wall');
+                    $('#maze-board').append(cell);
+                }
+            }
+
+            renderEntities();
+
+            gameLoop = setInterval(moveEnemies, 700);
+
+            // START TIMER
+            timeLeft = 60;
+            $('#time-val').text(timeLeft).css('color', '#fff');
+            timerInterval = setInterval(() => {
+                if(isDead) return;
+                timeLeft--;
+                $('#time-val').text(timeLeft);
+                
+                if (timeLeft <= 10) {
+                    $('#time-val').css('color', 'var(--danger)');
+                }
+                
+                // FAIL STATE: TIME OUT
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    clearInterval(gameLoop);
+                    window.location.href = `index.html?stage=fail&name=${encodeURIComponent(playerName)}&score=${currentScore}`;
+                }
+            }, 1000);
+        }
+
+        function updateSparklesUI() {
+            let collected = totalItems - activeItems.length;
+            $('#sparkles-display').text(`✨ ${collected} / ${totalItems}`);
+        }
+
+        function renderEntities() {
+            if(isDead) return;
+            $('.entity').remove(); 
+
+            // Goal (Oasis)
+            let goalEl = $(`<span class="entity goal">🌴</span>`);
+            if (activeItems.length > 0) goalEl.css('opacity', '0.4').css('filter', 'grayscale(100%)'); 
+            $(`#cell-${goal.r}-${goal.c}`).append(goalEl);
+
+            // Sparkles
+            activeItems.forEach(d => {
+                $(`#cell-${d.r}-${d.c}`).append('<span class="entity sparkle">✨</span>');
+            });
+            
+            // Snakes
+            activeSnakes.forEach(s => {
+                $(`#cell-${s.r}-${s.c}`).append('<span class="entity enemy">🐍</span>');
+            });
+
+            // Player (Camel)
+            $(`#cell-${player.r}-${player.c}`).append('<span class="entity player" id="camel">🐫</span>');
+        }
+
+        // ENEMY AI - Snakes Bouncing
+        function moveEnemies() {
+            if (isDead) return;
+            let grid = levels[currentLvl].grid;
+
+            activeSnakes.forEach(s => {
+                let nextR = s.r + s.dr;
+                let nextC = s.c + s.dc;
+                if (grid[nextR][nextC] === 1) {
+                    s.dr *= -1; 
+                    s.dc *= -1; 
+                } else {
+                    s.r = nextR; 
+                    s.c = nextC;
+                }
+            });
+
+            renderEntities();
+            checkCollisions();
+        }
+
+        // PLAYER MOVEMENT
+        $(document).keydown(function(e) {
+            if (isMoving || isDead) return;
+
+            let nextR = player.r;
+            let nextC = player.c;
+
+            if (e.key === "ArrowUp" || e.key === "w" || e.key === "W") nextR--;
+            else if (e.key === "ArrowDown" || e.key === "s" || e.key === "S") nextR++;
+            else if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") nextC--;
+            else if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") nextC++;
+            else return;
+
+            e.preventDefault();
+
+            let grid = levels[currentLvl].grid;
+
+            if (grid[nextR][nextC] === 1) return;
+
+            // Block Oasis if sparkles are not collected
+            if (nextR === goal.r && nextC === goal.c && activeItems.length > 0) {
+                $('#sys-display').html(`<span style="color: #ffd280;">Collect all ✨ first!</span>`);
+                setTimeout(() => { if(!isDead) $('#sys-display').text('Navigating...'); }, 1200);
+                return; 
+            }
+
+            player.r = nextR;
+            player.c = nextC;
+            
+            isMoving = true;
+
+            // Check if collected a sparkle
+            let itemIdx = activeItems.findIndex(d => d.r === player.r && d.c === player.c);
+            if (itemIdx > -1) {
+                activeItems.splice(itemIdx, 1);
+                updateSparklesUI();
+            }
+
+            renderEntities();
+            checkCollisions();
+
+            setTimeout(() => { isMoving = false; }, 100);
+        });
+
+        function checkCollisions() {
+            if (isDead) return;
+
+            // Win Condition
+            if (player.r === goal.r && player.c === goal.c && activeItems.length === 0) {
+                isDead = true; 
+                clearInterval(gameLoop);
+                clearInterval(timerInterval);
+                
+                // Add Score
+                currentScore += 150;
+                $('#score-display').text(`Score: ${currentScore}`);
+
+                $('#sys-display').html(`<span style="color: #4CAF50;">Oasis Unlocked!</span>`);
+                $('#maze-board').addClass('maze-glow');
+                $('#camel').html('🌴🐫🌴'); 
+                
+                setTimeout(() => {
+                    $('#maze-board').removeClass('maze-glow');
+                    currentLvl++;
+                    loadLevel(currentLvl);
+                }, 1200);
+                return;
+            }
+
+            // Lose Condition
+            let caughtBySnake = activeSnakes.some(s => s.r === player.r && s.c === player.c);
+
+            if (caughtBySnake) {
+                isDead = true;
+                clearInterval(gameLoop);
+                clearInterval(timerInterval);
+                
+                $('#sys-display').html(`<span style="color: var(--danger);">CAUGHT!</span>`);
+                $('#maze-board').addClass('death-flash');
+                $('#camel').html('☠️');
+                
+                // FAIL STATE: SEND TO HUB
+                setTimeout(() => {
+                    window.location.href = `index.html?stage=fail&name=${encodeURIComponent(playerName)}&score=${currentScore}`;
+                }, 1000);
+            }
+        }
+
+        $(document).ready(function() {
+            loadLevel(currentLvl);
+        });
+    </script>
+</body>
+</html>
