@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Desert Vault - Memory Sequence</title>
+    <link rel="stylesheet" href="shared.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        .memory-board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 25px; width: max-content; margin: 0 auto 40px auto; }
+        .mem-tile { width: 110px; height: 110px; background: rgba(26, 18, 12, 0.95); border: 2px solid var(--primary); border-radius: 15px; display: flex; justify-content: center; align-items: center; font-size: 55px; cursor: pointer; box-shadow: 0 0 15px rgba(212, 136, 51, 0.2); transition: all 0.15s ease-out; user-select: none; }
+        
+        #tile-0.active { background-color: #d48833; box-shadow: 0 0 50px #d48833; transform: scale(1.1); border-color: #fff; }
+        #tile-1.active { background-color: #00ccff; box-shadow: 0 0 50px #00ccff; transform: scale(1.1); border-color: #fff; }
+        #tile-2.active { background-color: #4CAF50; box-shadow: 0 0 50px #4CAF50; transform: scale(1.1); border-color: #fff; }
+        #tile-3.active { background-color: #ffcc00; box-shadow: 0 0 50px #ffcc00; transform: scale(1.1); border-color: #fff; }
+        #tile-4.active { background-color: #ff3333; box-shadow: 0 0 50px #ff3333; transform: scale(1.1); border-color: #fff; }
+        #tile-5.active { background-color: #9933cc; box-shadow: 0 0 50px #9933cc; transform: scale(1.1); border-color: #fff; }
+    </style>
+</head>
+<body>
+    <canvas id="dust-canvas"></canvas>
+    <div class="game-wrapper">
+        <div class="hud">
+            <div id="life-display">Lives: ❤️❤️❤️</div>
+            <div id="level-display">Level: 1 / 4</div>
+            <div id="score-display">Score: 0</div>
+        </div>
+        
+        <div class="sys-display" id="sys-display">Initializing Sequence...</div>
+
+        <h2>The Lost Dallah Cipher</h2>
+        <p class="game-instructions">Memorize the glowing heritage symbols. <span style="color: #ffd280;">The sequence gets longer and faster!</span></p>
+
+        <div class="memory-board">
+            <div class="mem-tile" id="tile-0" data-id="0">🏺</div>
+            <div class="mem-tile" id="tile-1" data-id="1">🐪</div>
+            <div class="mem-tile" id="tile-2" data-id="2">🌴</div>
+            <div class="mem-tile" id="tile-3" data-id="3">🌙</div>
+            <div class="mem-tile" id="tile-4" data-id="4">☀️</div>
+            <div class="mem-tile" id="tile-5" data-id="5">🗡️</div>
+        </div>
+
+        <div class="controls">
+            <button class="btn" onclick="location.reload()">Restart Protocol</button>
+            <button class="btn" id="btn-return">Return to Hub</button>
+        </div>
+    </div>
+
+    <script src="shared.js"></script>
+    <script>
+        $('#btn-return').click(() => Session.returnToHub(2));
+
+        let sequence = [], playerStep = 0, level = 1, maxLevel = 4, hearts = 3, isWatching = true, isDead = false;
+
+        $(document).ready(() => setTimeout(startLevel, 1000));
+
+        function startLevel() {
+            isWatching = true; playerStep = 0;
+            let itemsToAdd = (level === 1) ? 3 : 2;
+            for(let i = 0; i < itemsToAdd; i++) sequence.push(Math.floor(Math.random() * 6)); 
+            
+            $('#level-display').text(`Level: ${level} / ${maxLevel}`);
+            $('#sys-display').html(`Memorize ${sequence.length} Symbols... <span style="color: #ffd280;">(Watch)</span>`);
+            setTimeout(playSequence, 1000);
+        }
+
+        function playSequence() {
+            let speed = 900 - (level * 100); 
+            let flashDuration = speed * 0.6; 
+            let i = 0;
+            let interval = setInterval(() => {
+                flashTile(sequence[i], flashDuration);
+                i++;
+                if (i >= sequence.length) {
+                    clearInterval(interval);
+                    setTimeout(() => {
+                        isWatching = false;
+                        $('#sys-display').html(`System Ready. <span style="color: #4CAF50;">(Your Turn)</span>`);
+                    }, speed);
+                }
+            }, speed); 
+        }
+
+        function flashTile(id, duration) {
+            let tile = $(`#tile-${id}`); tile.addClass('active');
+            setTimeout(() => tile.removeClass('active'), duration); 
+        }
+
+        $('.mem-tile').click(function() {
+            if (isWatching || isDead) return;
+            let id = parseInt($(this).data('id'));
+            flashTile(id, 300); 
+
+            if (id === sequence[playerStep]) {
+                playerStep++;
+                if (playerStep === sequence.length) {
+                    isWatching = true; Session.addScore(100 * level);
+                    if (level === maxLevel) {
+                        $('#sys-display').html(`<span style="color: #4CAF50;">Cipher Broken! Vault Accessed.</span>`);
+                        // Goes to Stage 3 (Mazes) when you win!
+                        setTimeout(() => Session.goToNextStage(3), 1500);
+                    } else {
+                        level++;
+                        $('#sys-display').html(`<span style="color: #4CAF50;">Match! Generating Next Tier...</span>`);
+                        setTimeout(startLevel, 1500);
+                    }
+                }
+            } else {
+                isWatching = true; hearts--; Session.subtractScore(50); 
+                $('#life-display').text("Lives: " + "❤️".repeat(hearts));
+                $(this).addClass('error-shake'); setTimeout(() => $(this).removeClass('error-shake'), 400);
+                
+                if (hearts <= 0) {
+                    isDead = true; setTimeout(() => Session.failHeist(), 1000);
+                } else {
+                    $('#sys-display').html(`<span style="color: var(--danger);">Error! Replaying Sequence...</span>`);
+                    setTimeout(() => { playerStep = 0; playSequence(); }, 1500);
+                }
+            }
+        });
+    </script>
+</body>
+</html>
