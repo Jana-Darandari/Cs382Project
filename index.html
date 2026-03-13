@@ -19,10 +19,10 @@
         @keyframes blink { 0% { opacity: 0.2; } 100% { opacity: 0.8; } }
         .action-btn { display: none; margin-top: 20px; width: 100%; font-size: 18px; }
         .inventory-wrapper { position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; z-index: 10; }
-        .inventory { display: flex; gap: 20px; padding: 15px 30px; background: rgba(0,0,0,0.8); border: 1px dashed var(--primary); border-radius: 12px; box-shadow: var(--glow); }
-        .inv-item { font-size: 35px; opacity: 0.2; transition: 0.5s; filter: grayscale(100%); position: relative; }
+        .inventory { display: flex; gap: 30px; padding: 20px 40px; background: rgba(0,0,0,0.8); border: 1px dashed var(--primary); border-radius: 12px; box-shadow: var(--glow); }
+        .inv-item { font-size: 40px; opacity: 0.2; transition: 0.5s; filter: grayscale(100%); position: relative; }
         .inv-item.collected { opacity: 1; filter: grayscale(0%); transform: scale(1.1); }
-        .inv-item.collected::after { content: '✨'; position: absolute; top: -10px; right: -10px; font-size: 16px; text-shadow: none; animation: float 2s infinite ease-in-out; }
+        .inv-item.collected::after { content: '✨'; position: absolute; top: -10px; right: -10px; font-size: 18px; text-shadow: none; animation: float 2s infinite ease-in-out; }
     </style>
 </head>
 <body>
@@ -61,8 +61,8 @@
     </div>
 
     <div class="inventory-wrapper" id="inv-wrapper" style="display: none;">
+        <p style="font-size: 14px; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 10px; opacity: 0.8; text-align: center; color: var(--primary);">Artifacts</p>
         <div class="inventory">
-            <div class="inv-item" id="inv-disk" title="Encrypted Disk">💾</div>
             <div class="inv-item" id="inv-map" title="Ancient Map">🗺️</div>
             <div class="inv-item" id="inv-key" title="Vault Key">🗝️</div>
             <div class="inv-item" id="inv-diamond" title="The Desert Gem">💎</div>
@@ -93,22 +93,22 @@
             let storyLines = []; let nextAction = {};
 
             if (currentStage === '1') {
-                storyLines = ["I finally made it inside the tent.", "The laser grid is active. One wrong move and the alarms will trigger.", "There's a terminal over there. I need to decrypt its cipher to get the data disk."];
+                storyLines = ["I finally made it inside the tent.", "The laser grid is active. One wrong move and the alarms will trigger.", "There's a terminal over there. I need to decrypt its cipher to get the map."];
                 nextAction = { text: "Access Terminal", url: `cipher.html?name=${encodeURIComponent(playerName)}&score=${playerScore}` };
             } else if (currentStage === '2') {
-                $('#inv-disk').addClass('collected'); 
-                storyLines = ["Got the disk. It holds a partial map, but the rest is locked behind an ancient sequence.", "I need to align the heritage symbols exactly as they flash.", "One mistake and the sequence resets."];
+                $('#inv-map').addClass('collected'); 
+                storyLines = ["Got the map. But the coordinates to the vault are encrypted behind an ancient visual sequence.", "I need to align the heritage symbols exactly as they flash.", "One mistake and the sequence resets."];
                 nextAction = { text: "Decode Sequence", url: `memory.html?name=${encodeURIComponent(playerName)}&score=${playerScore}` };
             } else if (currentStage === '3') {
-                $('#inv-disk').addClass('collected'); $('#inv-map').addClass('collected'); 
-                storyLines = ["The full map is decoded.", "But the vault is hidden deep within the desert catacombs.", "I need to navigate the shifting sands to reach the entrance before the snakes catch me."];
+                $('#inv-map').addClass('collected'); 
+                storyLines = ["The sequence is broken and the coordinates are locked in.", "The vault is hidden deep within the desert catacombs.", "I need to navigate the shifting sands to reach the entrance before the snakes catch me."];
                 nextAction = { text: "Enter the Dunes", url: `mazes.html?name=${encodeURIComponent(playerName)}&score=${playerScore}` };
             } else if (currentStage === '4') {
-                $('#inv-disk').addClass('collected'); $('#inv-map').addClass('collected'); $('#inv-key').addClass('collected'); 
+                $('#inv-map').addClass('collected'); $('#inv-key').addClass('collected'); 
                 storyLines = ["I made it across the sands. The heavy vault doors are right in front of me.", "...but the power grid is completely scrambled.", "I need to reroute the colored energy nodes without crossing the wires to restore power."];
                 nextAction = { text: "Access Power Grid", url: `maze.html?name=${encodeURIComponent(playerName)}&score=${playerScore}` };
             } else if (currentStage === '5') {
-                $('#inv-disk').addClass('collected'); $('#inv-map').addClass('collected'); $('#inv-key').addClass('collected'); 
+                $('#inv-map').addClass('collected'); $('#inv-key').addClass('collected'); 
                 setTimeout(() => $('#inv-diamond').addClass('collected'), 1000); 
                 storyLines = ["The power grid is online. The heavy stone doors are opening.", "There it is. The Desert Gem.", "The secrets of the sands are finally mine."];
                 nextAction = { text: "Complete Mission", url: "SHOW_SUCCESS" };
