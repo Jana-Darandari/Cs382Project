@@ -15,8 +15,19 @@
             transition: all 0.3s; margin: 50px auto 0 auto;
         }
         .dialogue-text { font-size: 22px; line-height: 1.6; text-shadow: 0 0 5px var(--primary); min-height: 70px; }
+        
         .click-indicator { position: absolute; bottom: 10px; right: 20px; font-size: 14px; opacity: 0.5; animation: blink 1s infinite alternate; }
         @keyframes blink { 0% { opacity: 0.2; } 100% { opacity: 0.8; } }
+        
+        /* The new Skip Button styling */
+        #skip-btn {
+            position: absolute; top: 15px; right: 15px; background: transparent; 
+            color: var(--primary); border: 1px solid var(--primary); border-radius: 4px; 
+            padding: 5px 10px; cursor: pointer; font-family: inherit; font-size: 12px; 
+            text-transform: uppercase; transition: 0.3s;
+        }
+        #skip-btn:hover { background: var(--primary); color: #1a120c; }
+
         .action-btn { display: none; margin-top: 20px; width: 100%; font-size: 18px; }
         .inventory-wrapper { position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; z-index: 10; }
         .inventory { display: flex; gap: 30px; padding: 20px 40px; background: rgba(0,0,0,0.8); border: 1px dashed var(--primary); border-radius: 12px; box-shadow: var(--glow); }
@@ -55,6 +66,7 @@
     </div>
 
     <div class="dialogue-container" id="dialogue-box" style="display: none;">
+        <button id="skip-btn">Skip ⏭</button>
         <div class="dialogue-text" id="text-display">...</div>
         <div class="click-indicator">Click to continue ▼</div>
         <button class="btn action-btn" id="launch-btn"></button>
@@ -97,71 +109,93 @@
                 nextAction = { text: "Access Terminal", url: `cipher.html?name=${encodeURIComponent(playerName)}&score=${playerScore}` };
             } else if (currentStage === '2') {
                 $('#inv-map').addClass('collected'); 
-                storyLines = ["Got the map. But the coordinates to the vault are encrypted behind an ancient visual sequence.", "I need to align the heritage symbols exactly as they flash.", "One mistake and the sequence resets."];
-                nextAction = { text: "Decode Sequence", url: `memory.html?name=${encodeURIComponent(playerName)}&score=${playerScore}` };
-            } else if (currentStage === '3') {
-                $('#inv-map').addClass('collected'); 
-                storyLines = ["The sequence is broken and the coordinates are locked in.", "The vault is hidden deep within the desert catacombs.", "I need to navigate the shifting sands to reach the entrance before the snakes catch me."];
+                storyLines = ["Got the map! The coordinates point deep within the desert catacombs.", "I need to navigate the shifting sands to reach the vault entrance.", "I have to be fast... and avoid the snakes."];
                 nextAction = { text: "Enter the Dunes", url: `mazes.html?name=${encodeURIComponent(playerName)}&score=${playerScore}` };
+            } else if (currentStage === '3') {
+                $('#inv-map').addClass('collected'); $('#inv-key').addClass('collected'); 
+                storyLines = ["I made it through the sands and found the Vault Key.", "But the final door is sealed by an ancient digital lock.", "I need to repeat the heritage sequence perfectly to open it. One mistake and it resets."];
+                nextAction = { text: "Decode Sequence", url: `memory.html?name=${encodeURIComponent(playerName)}&score=${playerScore}` };
             } else if (currentStage === '4') {
                 $('#inv-map').addClass('collected'); $('#inv-key').addClass('collected'); 
-                storyLines = ["I made it across the sands. The heavy vault doors are right in front of me.", "...but the power grid is completely scrambled.", "I need to reroute the colored energy nodes without crossing the wires to restore power."];
-                nextAction = { text: "Access Power Grid", url: `maze.html?name=${encodeURIComponent(playerName)}&score=${playerScore}` };
-            } else if (currentStage === '5') {
-                $('#inv-map').addClass('collected'); $('#inv-key').addClass('collected'); 
                 setTimeout(() => $('#inv-diamond').addClass('collected'), 1000); 
-                storyLines = ["The power grid is online. The heavy stone doors are opening.", "There it is. The Desert Gem.", "The secrets of the sands are finally mine."];
+                storyLines = ["The sequence is accepted. The heavy stone doors are opening.", "There it is. The Desert Gem.", "The secrets of the sands are finally mine."];
                 nextAction = { text: "Complete Mission", url: "SHOW_SUCCESS" };
             } else if (currentStage === 'fail') {
                 storyLines = ["WARNING: SYSTEM LOCKOUT.", "Security breach detected. Terminal Access Denied.", "The alarms have been triggered. I need to get out of here!"];
                 nextAction = { text: "View Mission Report", url: "SHOW_FAIL" };
             }
 
-            let currentLine = 0; let isTyping = false;
+            let currentLine = 0; 
+            let isTyping = false;
+            let typingTimer; // We need to store the timer to stop it
 
             function typeText(text) {
                 isTyping = true; $('#text-display').empty(); let i = 0;
-                let timer = setInterval(function() {
+                typingTimer = setInterval(function() {
                     if (i < text.length) {
                         $('#text-display').append(text.charAt(i)); i++;
                     } else {
-                        clearInterval(timer); isTyping = false;
+                        clearInterval(typingTimer); isTyping = false;
                     }
                 }, 35); 
             }
 
+            // Function to show the final button when story ends
+            function showNextAction() {
+                $('.click-indicator').hide();
+                $('#skip-btn').hide();
+                $('#text-display').css('min-height', 'auto');
+                
+                let btn = $('#launch-btn');
+                btn.text(nextAction.text).show();
+                
+                btn.off('click').click(function(e) {
+                    e.stopPropagation(); 
+                    if (nextAction.url === "SHOW_SUCCESS") {
+                        $('#dialogue-box').fadeOut(400); $('#result-name').text(playerName);
+                        setTimeout(() => { $('#result-screen').fadeIn(500); }, 500);
+                    } else if (nextAction.url === "SHOW_FAIL") {
+                        $('#dialogue-box').fadeOut(400);
+                        $('#result-screen').css('border-color', 'var(--danger)').css('box-shadow', '0 0 30px rgba(204, 51, 51, 0.8)');
+                        $('#result-title').text("System Locked").css('color', 'var(--danger)');
+                        $('#result-desc').html(`Mission Failed, <span style="color: var(--danger); font-weight: bold;">${playerName}</span>.<br>Security measures were triggered.`);
+                        $('#result-btn').css('background', 'var(--danger)').css('border-color', 'var(--danger)').text("View Final Score");
+                        $('#dash-title').text("MISSION FAILED").css('color', 'var(--danger)').css('border-bottom-color', 'var(--danger)');
+                        $('#dash-levels').text("Failed"); $('#progress-bar').css('background', 'var(--danger)');
+                        setTimeout(() => { $('#result-screen').fadeIn(500); }, 500);
+                    } else {
+                        window.location.href = nextAction.url;
+                    }
+                });
+            }
+
             typeText(storyLines[0]);
 
+            // SKIP ALL BUTTON LOGIC
+            $('#skip-btn').click(function(e) {
+                e.stopPropagation(); // Stop the dialogue box from registering the click
+                clearInterval(typingTimer); // Stop typing immediately
+                isTyping = false;
+                currentLine = storyLines.length - 1; // Jump to last line
+                $('#text-display').text(storyLines[currentLine]); // Show last line text
+                showNextAction(); // Show the launch button
+            });
+
+            // DIALOGUE BOX CLICK LOGIC
             $('#dialogue-box').click(function() {
-                if (isTyping) return; 
+                // If it's currently typing, instantly finish the line!
+                if (isTyping) {
+                    clearInterval(typingTimer);
+                    $('#text-display').text(storyLines[currentLine]);
+                    isTyping = false;
+                    return; 
+                } 
+
                 currentLine++;
                 if (currentLine < storyLines.length) {
                     typeText(storyLines[currentLine]);
                 } else {
-                    $('.click-indicator').hide();
-                    $('#text-display').css('min-height', 'auto');
-                    
-                    let btn = $('#launch-btn');
-                    btn.text(nextAction.text).show();
-                    
-                    btn.off('click').click(function(e) {
-                        e.stopPropagation(); 
-                        if (nextAction.url === "SHOW_SUCCESS") {
-                            $('#dialogue-box').fadeOut(400); $('#result-name').text(playerName);
-                            setTimeout(() => { $('#result-screen').fadeIn(500); }, 500);
-                        } else if (nextAction.url === "SHOW_FAIL") {
-                            $('#dialogue-box').fadeOut(400);
-                            $('#result-screen').css('border-color', 'var(--danger)').css('box-shadow', '0 0 30px rgba(204, 51, 51, 0.8)');
-                            $('#result-title').text("System Locked").css('color', 'var(--danger)');
-                            $('#result-desc').html(`Mission Failed, <span style="color: var(--danger); font-weight: bold;">${playerName}</span>.<br>Security measures were triggered.`);
-                            $('#result-btn').css('background', 'var(--danger)').css('border-color', 'var(--danger)').text("View Final Score");
-                            $('#dash-title').text("MISSION FAILED").css('color', 'var(--danger)').css('border-bottom-color', 'var(--danger)');
-                            $('#dash-levels').text("Failed"); $('#progress-bar').css('background', 'var(--danger)');
-                            setTimeout(() => { $('#result-screen').fadeIn(500); }, 500);
-                        } else {
-                            window.location.href = nextAction.url;
-                        }
-                    });
+                    showNextAction();
                 }
             });
         }

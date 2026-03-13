@@ -7,10 +7,21 @@
     <link rel="stylesheet" href="shared.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
-        #maze-board { display: grid; gap: 2px; background-color: rgba(212, 136, 51, 0.4); border: 2px solid var(--primary); margin: 0 auto 30px auto; width: max-content; box-shadow: 0 0 20px rgba(212, 136, 51, 0.2); user-select: none; }
-        .maze-cell { width: 45px; height: 45px; background-color: rgba(26, 18, 12, 0.95); position: relative; }
+        /* WE SET A VARIABLE SO WE CAN SHRINK THE ENTIRE BOARD AT ONCE */
+        :root {
+            --cell-size: 38px; 
+        }
+
+        #maze-board { display: grid; gap: 2px; background-color: rgba(212, 136, 51, 0.4); border: 2px solid var(--primary); margin: 0 auto 15px auto; width: max-content; box-shadow: 0 0 20px rgba(212, 136, 51, 0.2); user-select: none; }
+        
+        /* CELLS NOW USE THE VARIABLE */
+        .maze-cell { width: var(--cell-size); height: var(--cell-size); background-color: rgba(26, 18, 12, 0.95); position: relative; }
+        
         .wall { background-color: var(--primary); background-image: url('data:image/svg+xml;utf8,<svg width="10" height="10" xmlns="http://www.w3.org/2000/svg"><rect width="10" height="10" fill="none"/><circle cx="5" cy="5" r="1" fill="%231a120c"/></svg>'); opacity: 0.8; box-shadow: inset 0 0 10px rgba(0,0,0,0.8); }
-        .entity { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 30px; transition: all 0.1s ease; }
+        
+        /* EMOJIS SHRINK TO FIT THE CELLS */
+        .entity { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: calc(var(--cell-size) * 0.7); transition: all 0.1s ease; }
+        
         .player { animation: walk 0.4s infinite alternate; z-index: 20; }
         @keyframes walk { 0% { transform: translateY(0px) rotate(-5deg); } 100% { transform: translateY(-4px) rotate(5deg); } }
         .enemy { filter: drop-shadow(0 0 5px red); z-index: 15; }
@@ -18,6 +29,17 @@
         @keyframes pulse { 0% { transform: scale(1); opacity: 0.8; } 100% { transform: scale(1.2); opacity: 1; } }
         .sparkle { animation: float 1s infinite alternate; z-index: 5; filter: drop-shadow(0 0 5px #ffd280); }
         @keyframes float { 0% { transform: translateY(0px); } 100% { transform: translateY(-5px); } }
+
+        /* MOBILE FIXES: Force everything to fit without scrolling */
+        @media (max-width: 600px) {
+            :root { --cell-size: 26px; } /* Shrinks the grid massively for phones */
+            #maze-board { transform: none !important; margin-bottom: 10px !important; }
+            .game-instructions { margin-bottom: 10px; font-size: 13px; line-height: 1.2; }
+            .sys-display { margin-bottom: 10px; }
+            h2 { margin-bottom: 5px; }
+            .mobile-dpad { margin: 10px auto 15px auto; }
+            .mobile-dpad button { width: 50px; height: 50px; }
+        }
     </style>
 </head>
 <body>
@@ -42,11 +64,9 @@
 
         <div class="mobile-dpad">
             <button id="btn-up">⬆️</button>
-            <div>
-                <button id="btn-left">⬅️</button>
-                <button id="btn-down">⬇️</button>
-                <button id="btn-right">➡️</button>
-            </div>
+            <button id="btn-left">⬅️</button>
+            <button id="btn-down">⬇️</button>
+            <button id="btn-right">➡️</button>
         </div>
 
         <div class="controls">
@@ -57,7 +77,7 @@
 
     <script src="shared.js"></script>
     <script>
-        $('#btn-return').click(() => Session.returnToHub(3));
+        $('#btn-return').click(() => Session.returnToHub(2));
 
         const levels = [
             { grid: [[1, 1, 1, 1, 1, 1, 1, 1, 1], [1, 0, 0, 0, 0, 1, 0, 0, 1], [1, 0, 1, 1, 0, 1, 0, 1, 1], [1, 0, 0, 0, 0, 0, 0, 0, 1], [1, 1, 1, 0, 1, 1, 1, 0, 1], [1, 0, 0, 0, 0, 0, 0, 0, 1], [1, 1, 1, 1, 1, 1, 1, 1, 1]], start: { r: 1, c: 1 }, goal: { r: 5, c: 7 }, items: [{ r: 1, c: 7 }, { r: 5, c: 1 }], snakes: [{ r: 3, c: 1, dr: 0, dc: 1 }] },
@@ -70,7 +90,7 @@
         let isMoving = false, gameLoop, isDead = false, timerInterval, timeLeft = 60;
 
         function loadLevel(index) {
-            if (index >= levels.length) return Session.goToNextStage(4);
+            if (index >= levels.length) return Session.goToNextStage(3);
 
             clearInterval(gameLoop); clearInterval(timerInterval); isDead = false;
             let lvl = levels[index]; $('#status-display').text(`Dunes: ${index + 1} / 4`); $('#sys-display').html(`Navigating...`);
@@ -80,7 +100,9 @@
             activeItems = lvl.items.map(d => ({ ...d })); totalItems = activeItems.length;
             updateSparklesUI(); activeSnakes = lvl.snakes.map(s => ({ ...s }));
 
-            $('#maze-board').css({ 'grid-template-columns': `repeat(${cols}, 45px)`, 'grid-template-rows': `repeat(${rows}, 45px)` }).empty();
+            // GRID NOW USES THE CSS VARIABLE FOR SIZING
+            $('#maze-board').css({ 'grid-template-columns': `repeat(${cols}, var(--cell-size))`, 'grid-template-rows': `repeat(${rows}, var(--cell-size))` }).empty();
+            
             for (let r = 0; r < rows; r++) {
                 for (let c = 0; c < cols; c++) {
                     let cell = $(`<div class="maze-cell" id="cell-${r}-${c}"></div>`);

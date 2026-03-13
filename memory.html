@@ -49,7 +49,8 @@
 
     <script src="shared.js"></script>
     <script>
-        $('#btn-return').click(() => Session.returnToHub(2));
+        // Set this as Stage 3 Hub return
+        $('#btn-return').click(() => Session.returnToHub(3));
 
         let sequence = [], playerStep = 0, level = 1, maxLevel = 4, hearts = 3, isWatching = true, isDead = false;
 
@@ -98,8 +99,8 @@
                     isWatching = true; Session.addScore(100 * level);
                     if (level === maxLevel) {
                         $('#sys-display').html(`<span style="color: #4CAF50;">Cipher Broken! Vault Accessed.</span>`);
-                        // Goes to Stage 3 (Mazes) when you win!
-                        setTimeout(() => Session.goToNextStage(3), 1500);
+                        // Send to Stage 4 (Win Screen) when beaten!
+                        setTimeout(() => Session.goToNextStage(4), 1500);
                     } else {
                         level++;
                         $('#sys-display').html(`<span style="color: #4CAF50;">Match! Generating Next Tier...</span>`);
