@@ -11,86 +11,86 @@ body {
     background-color: var(--bg-color);
     color: var(--primary);
     font-family: 'Courier Prime', monospace;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 100vh;
-    margin: 0;
-    overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+    height: 100vh; margin: 0; overflow: hidden;
     background-image: url('desert_bg.png');
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
+    background-size: cover; background-position: center; background-repeat: no-repeat;
 }
 
-/* Background Flowing Dust */
 #dust-canvas {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    z-index: 0;
-    pointer-events: none;
+    position: fixed; top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    z-index: 0; pointer-events: none;
 }
 
-/* Main Container shared by all games */
+/* --- UNIVERSAL UI CONTAINERS --- */
 .game-wrapper {
-    border: 2px solid var(--primary);
-    border-radius: 12px;
-    width: 700px;
-    min-height: 500px;
-    padding: 40px;
-    position: relative;
-    z-index: 10;
+    border: 2px solid var(--primary); border-radius: 12px;
+    width: 90%; max-width: 700px; min-height: auto; padding: 30px; 
+    position: relative; z-index: 10;
     box-shadow: var(--glow), inset 0 0 40px rgba(212, 136, 51, 0.1);
-    background-color: rgba(26, 18, 12, 0.75);
-    backdrop-filter: blur(6px);
-    text-align: center;
+    background-color: rgba(26, 18, 12, 0.75); backdrop-filter: blur(6px);
+    text-align: center; max-height: 95vh; overflow-y: auto;
 }
 
-/* Headers and UI structure */
 .hud {
-    display: flex;
-    justify-content: space-between;
-    font-size: 18px;
-    font-weight: bold;
+    display: flex; justify-content: space-between;
+    font-size: 18px; font-weight: bold;
     border-bottom: 1px dashed var(--primary);
-    padding-bottom: 15px;
-    margin-bottom: 25px;
+    padding-bottom: 15px; margin-bottom: 20px;
 }
 
 h2 {
-    text-transform: uppercase;
-    letter-spacing: 3px;
+    text-transform: uppercase; letter-spacing: 3px;
     text-shadow: 0 0 8px var(--primary);
-    font-size: 28px;
-    margin-bottom: 10px;
+    font-size: 28px; margin-bottom: 10px; text-align: center;
 }
 
-.controls {
-    display: flex;
-    justify-content: center;
-    gap: 15px;
+.game-instructions {
+    margin-bottom: 30px; font-style: italic; opacity: 0.8;
+    text-align: center; color: #fff; max-width: 600px; margin-left: auto; margin-right: auto;
 }
 
-/* Shared Button Styles */
+.sys-display { text-align: center; font-size: 18px; font-weight: bold; margin-bottom: 20px; }
+
+.controls { display: flex; justify-content: center; gap: 15px; margin-top: 20px; }
+
 .btn {
-    background-color: transparent;
-    color: var(--primary);
-    border: 1px solid var(--primary);
-    padding: 10px 20px;
-    font-family: inherit;
-    font-size: 14px;
-    cursor: pointer;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    transition: all 0.3s ease;
-    border-radius: 4px;
+    background-color: transparent; color: var(--primary); border: 1px solid var(--primary);
+    padding: 10px 20px; font-family: inherit; font-size: 14px; cursor: pointer;
+    text-transform: uppercase; letter-spacing: 2px; transition: all 0.3s ease; border-radius: 4px;
 }
+.btn:hover { background-color: var(--primary); color: #1a120c; box-shadow: var(--glow); }
 
-.btn:hover {
-    background-color: var(--primary);
-    color: #1a120c;
-    box-shadow: var(--glow);
+/* --- UNIVERSAL ANIMATIONS --- */
+.success-glow { animation: levelComplete 1s ease; }
+@keyframes levelComplete { 0%, 100% { box-shadow: 0 0 20px rgba(212, 136, 51, 0.2); } 50% { box-shadow: 0 0 50px #4CAF50; border-color: #4CAF50; } }
+
+.death-flash { animation: die 0.5s ease; }
+@keyframes die { 50% { box-shadow: 0 0 50px var(--danger); border-color: var(--danger); } }
+
+.error-shake { border-color: var(--danger) !important; color: var(--danger) !important; animation: shake 0.4s; }
+@keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
+
+/* --- MOBILE D-PAD FOR MAZE --- */
+.mobile-dpad { display: none; }
+
+/* --- MOBILE RESPONSIVENESS --- */
+@media (max-width: 600px) {
+    h2 { font-size: 22px; }
+    .hud { flex-direction: column; align-items: center; gap: 10px; font-size: 15px; }
+    .btn { padding: 8px 12px; font-size: 12px; }
+    
+    .memory-board { gap: 15px; }
+    .mem-tile { width: 75px !important; height: 75px !important; font-size: 35px !important; }
+    
+    .slot { width: 35px !important; height: 40px !important; font-size: 22px !important; }
+    .letter-btn { width: 40px !important; height: 40px !important; font-size: 20px !important; margin: 3px; }
+    
+    #game-board, #maze-board { transform: scale(0.7); transform-origin: top center; margin-bottom: -50px; }
+    
+    .mobile-dpad { display: flex; flex-direction: column; align-items: center; margin-top: 10px; margin-bottom: 20px; }
+    .mobile-dpad button { width: 50px; height: 50px; font-size: 24px; margin: 5px; background: rgba(212,136,51,0.2); border: 2px solid var(--primary); border-radius: 12px; color: white; cursor: pointer; touch-action: manipulation; }
+    .mobile-dpad button:active { background: var(--primary); transform: scale(0.9); }
+    .mobile-dpad div { display: flex; }
 }

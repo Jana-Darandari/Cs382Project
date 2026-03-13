@@ -4,79 +4,45 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>The Desert Vault - Story</title>
-    
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <link rel="stylesheet" href="shared.css">
-
     <style>
         .dialogue-container {
-            position: relative; width: 600px; min-height: 120px;
+            position: relative; width: 90%; max-width: 600px; min-height: 120px;
             background: rgba(26, 18, 12, 0.95); border: 2px solid var(--primary);
             border-radius: 20px; box-shadow: var(--glow); padding: 30px;
             margin-top: 50px; z-index: 10; cursor: pointer; backdrop-filter: blur(5px);
-            margin-left: 200px; transition: all 0.3s;
+            transition: all 0.3s; margin: 50px auto 0 auto;
         }
-
-        .dialogue-container:hover { box-shadow: 0 0 30px rgba(212, 136, 51, 0.4); transform: scale(1.02); }
-
-        .dialogue-container::before {
-            content: ''; position: absolute; left: -20px; top: 50px;
-            border-width: 15px 20px 15px 0; border-style: solid;
-            border-color: transparent var(--primary) transparent transparent;
-        }
-        .dialogue-container::after {
-            content: ''; position: absolute; left: -16px; top: 52px;
-            border-width: 13px 18px 13px 0; border-style: solid;
-            border-color: transparent rgba(26, 18, 12, 0.95) transparent transparent;
-        }
-
         .dialogue-text { font-size: 22px; line-height: 1.6; text-shadow: 0 0 5px var(--primary); min-height: 70px; }
-
-        .click-indicator {
-            position: absolute; bottom: 10px; right: 20px;
-            font-size: 14px; opacity: 0.5; animation: blink 1s infinite alternate;
-        }
+        .click-indicator { position: absolute; bottom: 10px; right: 20px; font-size: 14px; opacity: 0.5; animation: blink 1s infinite alternate; }
         @keyframes blink { 0% { opacity: 0.2; } 100% { opacity: 0.8; } }
-
         .action-btn { display: none; margin-top: 20px; width: 100%; font-size: 18px; }
-
-        .inventory-wrapper { position: fixed; bottom: 40px; display: flex; flex-direction: column; align-items: center; z-index: 10; }
-
-        .inventory {
-            display: flex; gap: 30px; padding: 20px 40px; 
-            background: rgba(0,0,0,0.8); border: 1px dashed var(--primary); 
-            border-radius: 12px; box-shadow: var(--glow);
-        }
-        
-        .inv-item { font-size: 45px; opacity: 0.2; transition: 0.5s; filter: grayscale(100%); position: relative; }
-        
+        .inventory-wrapper { position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; z-index: 10; }
+        .inventory { display: flex; gap: 20px; padding: 15px 30px; background: rgba(0,0,0,0.8); border: 1px dashed var(--primary); border-radius: 12px; box-shadow: var(--glow); }
+        .inv-item { font-size: 35px; opacity: 0.2; transition: 0.5s; filter: grayscale(100%); position: relative; }
         .inv-item.collected { opacity: 1; filter: grayscale(0%); transform: scale(1.1); }
-        .inv-item.collected::after {
-            content: '✨'; position: absolute; top: -10px; right: -10px; 
-            font-size: 20px; text-shadow: none; animation: float 2s infinite ease-in-out;
-        }
-        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+        .inv-item.collected::after { content: '✨'; position: absolute; top: -10px; right: -10px; font-size: 16px; text-shadow: none; animation: float 2s infinite ease-in-out; }
     </style>
 </head>
 <body>
-
     <canvas id="dust-canvas"></canvas>
 
-    <div id="login-screen" style="display: none; position: relative; z-index: 20; text-align: center; margin: 150px auto; width: 400px; padding: 40px; background: rgba(26, 18, 12, 0.95); border: 2px solid var(--primary); border-radius: 20px; box-shadow: 0 0 15px rgba(212, 136, 51, 0.6);">
-        <h2 style="color: var(--primary); margin-bottom: 20px; text-transform: uppercase; letter-spacing: 2px;">Terminal Access</h2>
+    <div id="login-screen" style="display: none;" class="game-wrapper">
+        <h2 style="color: var(--primary); margin-bottom: 20px;">Terminal Access</h2>
         <p style="color: var(--primary); margin-bottom: 20px;">Enter Operator Name:</p>
         <input type="text" id="agent-name" style="background: rgba(0,0,0,0.5); border: 1px solid var(--primary); color: var(--primary); font-size: 18px; padding: 10px; margin-bottom: 20px; text-align: center; width: 80%; outline: none;" placeholder="Name...">
         <br>
-        <button style="background: transparent; color: var(--primary); border: 1px solid var(--primary); padding: 10px 20px; cursor: pointer; text-transform: uppercase; letter-spacing: 2px;" onclick="startStory()">Initialize Heist</button>
+        <button class="btn" onclick="startStory()">Initialize Heist</button>
     </div>
 
-    <div id="result-screen" style="display: none; position: relative; z-index: 20; text-align: center; margin: 150px auto; width: 550px; padding: 50px; background: rgba(26, 18, 12, 0.95); border: 2px solid var(--primary); border-radius: 20px; box-shadow: 0 0 30px rgba(212, 136, 51, 0.8);">
-        <h2 id="result-title" style="color: var(--primary); margin-bottom: 20px; font-size: 36px; text-transform: uppercase; letter-spacing: 3px; text-shadow: 0 0 15px currentColor;">Vault Unlocked!</h2>
+    <div id="result-screen" style="display: none;" class="game-wrapper">
+        <h2 id="result-title" style="color: var(--primary); font-size: 36px;">Vault Unlocked!</h2>
         <p id="result-desc" style="color: #fff; font-size: 18px; line-height: 1.8; margin-bottom: 30px;">
             Congratulations, <span id="result-name" style="color: var(--primary); font-weight: bold;"></span>.<br>
-            You have successfully bypassed all security measures, restored the mainframe, and secured the Desert Gem.
+            You have successfully bypassed all security measures.
         </p>
-        <button id="result-btn" style="background: var(--primary); color: #1a120c; border: 1px solid var(--primary); padding: 15px 30px; font-size: 16px; cursor: pointer; text-transform: uppercase; letter-spacing: 2px; font-weight: bold; border-radius: 5px;" onclick="revealDashboard()">View Final Score</button>
+        <button id="result-btn" class="btn" onclick="revealDashboard()">View Final Score</button>
     </div>
 
     <div id="final-dashboard" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 350px; background: rgba(26, 18, 12, 0.98); border: 2px solid var(--primary); border-radius: 15px; padding: 30px; box-shadow: 0 0 50px rgba(212, 136, 51, 0.5); z-index: 200; text-align: center; color: var(--primary);">
@@ -84,29 +50,26 @@
         <div style="display: flex; justify-content: space-between; margin-bottom: 15px; font-size: 18px;"><span>Agent:</span> <span id="dash-name">Unknown</span></div>
         <div style="display: flex; justify-content: space-between; margin-bottom: 15px; font-size: 18px;"><span>Total Score:</span> <span id="dash-score">0</span></div>
         <div style="display: flex; justify-content: space-between; margin-bottom: 15px; font-size: 18px;"><span>Status:</span> <span id="dash-levels">Completed</span></div>
-        <div style="margin-top: 20px; text-align: center;">Heist Progress: <span id="progress-text">100%</span></div>
-        <div style="width: 100%; background: #222; height: 15px; border-radius: 10px; margin-top: 10px; overflow: hidden; border: 1px solid #444;"><div id="progress-bar" style="height: 100%; background: var(--primary); width: 0%; transition: width 2s ease-out;"></div></div>
-        <button style="background: transparent; color: var(--primary); border: 1px solid var(--primary); padding: 10px 20px; cursor: pointer; text-transform: uppercase; letter-spacing: 2px; margin-top: 30px; width: 100%;" onclick="window.location.href='index.html'">Restart System</button>
+        <div style="width: 100%; background: #222; height: 15px; border-radius: 10px; margin-top: 20px; overflow: hidden; border: 1px solid #444;"><div id="progress-bar" style="height: 100%; background: var(--primary); width: 0%; transition: width 2s ease-out;"></div></div>
+        <button class="btn" style="margin-top: 30px; width: 100%;" onclick="window.location.href='index.html'">Restart System</button>
     </div>
 
     <div class="dialogue-container" id="dialogue-box" style="display: none;">
         <div class="dialogue-text" id="text-display">...</div>
         <div class="click-indicator">Click to continue ▼</div>
-        <button class="btn action-btn" id="launch-btn" style="background: transparent; color: var(--primary); border: 1px solid var(--primary); padding: 10px 20px; cursor: pointer; text-transform: uppercase; letter-spacing: 2px;"></button>
+        <button class="btn action-btn" id="launch-btn"></button>
     </div>
 
     <div class="inventory-wrapper" id="inv-wrapper" style="display: none;">
-        <p style="font-size: 14px; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 10px; opacity: 0.8;">Artifacts</p>
         <div class="inventory">
+            <div class="inv-item" id="inv-disk" title="Encrypted Disk">💾</div>
             <div class="inv-item" id="inv-map" title="Ancient Map">🗺️</div>
             <div class="inv-item" id="inv-key" title="Vault Key">🗝️</div>
             <div class="inv-item" id="inv-diamond" title="The Desert Gem">💎</div>
         </div>
-        <button class="btn" style="margin-top: 20px; font-size: 10px; padding: 5px 10px; background: transparent; color: var(--primary); border: 1px solid var(--primary); cursor: pointer;" onclick="window.location.href='index.html'">Restart Story</button>
     </div>
 
     <script src="shared.js"></script>
-
     <script>
         const urlParams = new URLSearchParams(window.location.search);
         let playerName = urlParams.get('name');
@@ -122,62 +85,47 @@
         }
 
         function startStory() {
-            let nameInput = $('#agent-name').val().trim();
-            if (nameInput === "") nameInput = "Operator";
+            let nameInput = $('#agent-name').val().trim() || "Operator";
             window.location.href = `index.html?stage=1&name=${encodeURIComponent(nameInput)}&score=0`;
         }
 
         function runStory() {
-            let storyLines = [];
-            let nextAction = {};
+            let storyLines = []; let nextAction = {};
 
-            // STAGE 1: Cipher Game
             if (currentStage === '1') {
-                storyLines = ["I finally made it inside the tent.", "The laser grid is active. One wrong move and the alarms will trigger.", "There's a terminal over there. I need to decrypt its cipher to get the map."];
+                storyLines = ["I finally made it inside the tent.", "The laser grid is active. One wrong move and the alarms will trigger.", "There's a terminal over there. I need to decrypt its cipher to get the data disk."];
                 nextAction = { text: "Access Terminal", url: `cipher.html?name=${encodeURIComponent(playerName)}&score=${playerScore}` };
-            
-            // STAGE 2: Camel Maze
             } else if (currentStage === '2') {
-                $('#inv-map').addClass('collected'); 
-                storyLines = ["Got it. The map coordinates are locked in.", "But the vault is hidden deep within the desert catacombs.", "I need to navigate the shifting sands to reach the entrance."];
-                nextAction = { text: "Enter the Dunes", url: `mazes.html?name=${encodeURIComponent(playerName)}&score=${playerScore}` };
-
-            // STAGE 3: Power Grid
+                $('#inv-disk').addClass('collected'); 
+                storyLines = ["Got the disk. It holds a partial map, but the rest is locked behind an ancient sequence.", "I need to align the heritage symbols exactly as they flash.", "One mistake and the sequence resets."];
+                nextAction = { text: "Decode Sequence", url: `memory.html?name=${encodeURIComponent(playerName)}&score=${playerScore}` };
             } else if (currentStage === '3') {
-                $('#inv-map').addClass('collected');
-                $('#inv-key').addClass('collected'); 
+                $('#inv-disk').addClass('collected'); $('#inv-map').addClass('collected'); 
+                storyLines = ["The full map is decoded.", "But the vault is hidden deep within the desert catacombs.", "I need to navigate the shifting sands to reach the entrance before the snakes catch me."];
+                nextAction = { text: "Enter the Dunes", url: `mazes.html?name=${encodeURIComponent(playerName)}&score=${playerScore}` };
+            } else if (currentStage === '4') {
+                $('#inv-disk').addClass('collected'); $('#inv-map').addClass('collected'); $('#inv-key').addClass('collected'); 
                 storyLines = ["I made it across the sands. The heavy vault doors are right in front of me.", "...but the power grid is completely scrambled.", "I need to reroute the colored energy nodes without crossing the wires to restore power."];
                 nextAction = { text: "Access Power Grid", url: `maze.html?name=${encodeURIComponent(playerName)}&score=${playerScore}` };
-
-            // STAGE 4: Win Screen
-            } else if (currentStage === '4') {
-                $('#inv-map').addClass('collected');
-                $('#inv-key').addClass('collected'); 
+            } else if (currentStage === '5') {
+                $('#inv-disk').addClass('collected'); $('#inv-map').addClass('collected'); $('#inv-key').addClass('collected'); 
                 setTimeout(() => $('#inv-diamond').addClass('collected'), 1000); 
-
                 storyLines = ["The power grid is online. The heavy stone doors are opening.", "There it is. The Desert Gem.", "The secrets of the sands are finally mine."];
                 nextAction = { text: "Complete Mission", url: "SHOW_SUCCESS" };
-            
-            // FAIL STATE
             } else if (currentStage === 'fail') {
                 storyLines = ["WARNING: SYSTEM LOCKOUT.", "Security breach detected. Terminal Access Denied.", "The alarms have been triggered. I need to get out of here!"];
                 nextAction = { text: "View Mission Report", url: "SHOW_FAIL" };
             }
 
-            let currentLine = 0;
-            let isTyping = false;
+            let currentLine = 0; let isTyping = false;
 
             function typeText(text) {
-                isTyping = true;
-                $('#text-display').empty();
-                let i = 0;
+                isTyping = true; $('#text-display').empty(); let i = 0;
                 let timer = setInterval(function() {
                     if (i < text.length) {
-                        $('#text-display').append(text.charAt(i));
-                        i++;
+                        $('#text-display').append(text.charAt(i)); i++;
                     } else {
-                        clearInterval(timer);
-                        isTyping = false;
+                        clearInterval(timer); isTyping = false;
                     }
                 }, 35); 
             }
@@ -186,7 +134,6 @@
 
             $('#dialogue-box').click(function() {
                 if (isTyping) return; 
-
                 currentLine++;
                 if (currentLine < storyLines.length) {
                     typeText(storyLines[currentLine]);
@@ -199,26 +146,18 @@
                     
                     btn.off('click').click(function(e) {
                         e.stopPropagation(); 
-                        
                         if (nextAction.url === "SHOW_SUCCESS") {
-                            $('#dialogue-box').fadeOut(400);
-                            $('#result-name').text(playerName);
+                            $('#dialogue-box').fadeOut(400); $('#result-name').text(playerName);
                             setTimeout(() => { $('#result-screen').fadeIn(500); }, 500);
-                        
                         } else if (nextAction.url === "SHOW_FAIL") {
                             $('#dialogue-box').fadeOut(400);
                             $('#result-screen').css('border-color', 'var(--danger)').css('box-shadow', '0 0 30px rgba(204, 51, 51, 0.8)');
                             $('#result-title').text("System Locked").css('color', 'var(--danger)');
-                            $('#result-desc').html(`Mission Failed, <span style="color: var(--danger); font-weight: bold;">${playerName}</span>.<br>Security measures were triggered. You have been locked out.`);
+                            $('#result-desc').html(`Mission Failed, <span style="color: var(--danger); font-weight: bold;">${playerName}</span>.<br>Security measures were triggered.`);
                             $('#result-btn').css('background', 'var(--danger)').css('border-color', 'var(--danger)').text("View Final Score");
-                            
                             $('#dash-title').text("MISSION FAILED").css('color', 'var(--danger)').css('border-bottom-color', 'var(--danger)');
-                            $('#dash-levels').text("Failed");
-                            $('#progress-text').text("Failed");
-                            $('#progress-bar').css('background', 'var(--danger)');
-
+                            $('#dash-levels').text("Failed"); $('#progress-bar').css('background', 'var(--danger)');
                             setTimeout(() => { $('#result-screen').fadeIn(500); }, 500);
-
                         } else {
                             window.location.href = nextAction.url;
                         }
@@ -229,15 +168,10 @@
 
         function revealDashboard() {
             $('#result-screen').fadeOut(400);
-            $('#dash-name').text(playerName);
-            $('#dash-score').text(playerScore);
+            $('#dash-name').text(playerName); $('#dash-score').text(playerScore);
             setTimeout(() => {
                 $('#final-dashboard').fadeIn(500);
-                if(currentStage === 'fail') {
-                    $('#progress-bar').css('width', '20%'); 
-                } else {
-                    $('#progress-bar').css('width', '100%'); 
-                }
+                $('#progress-bar').css('width', currentStage === 'fail' ? '20%' : '100%'); 
             }, 500);
         }
     </script>
