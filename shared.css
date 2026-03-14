@@ -72,8 +72,7 @@ h2 {
 .error-shake { border-color: var(--danger) !important; color: var(--danger) !important; animation: shake 0.4s; }
 @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
 
-/* --- MOBILE D-PAD --- */
-.mobile-dpad { display: none; }
+
 
 /* --- MOBILE RESPONSIVENESS --- */
 @media (max-width: 600px) {

@@ -7,19 +7,20 @@
     <link rel="stylesheet" href="shared.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
-        /* WE SET A VARIABLE SO WE CAN SHRINK THE ENTIRE BOARD AT ONCE */
         :root {
             --cell-size: 38px; 
         }
 
-        #maze-board { display: grid; gap: 2px; background-color: rgba(212, 136, 51, 0.4); border: 2px solid var(--primary); margin: 0 auto 15px auto; width: max-content; box-shadow: 0 0 20px rgba(212, 136, 51, 0.2); user-select: none; }
+        /* Added 'touch-action: none;' so the phone doesn't scroll when you swipe! */
+        #maze-board { 
+            display: grid; gap: 2px; background-color: rgba(212, 136, 51, 0.4); 
+            border: 2px solid var(--primary); margin: 0 auto 15px auto; width: max-content; 
+            box-shadow: 0 0 20px rgba(212, 136, 51, 0.2); user-select: none; 
+            touch-action: none; 
+        }
         
-        /* CELLS NOW USE THE VARIABLE */
         .maze-cell { width: var(--cell-size); height: var(--cell-size); background-color: rgba(26, 18, 12, 0.95); position: relative; }
-        
         .wall { background-color: var(--primary); background-image: url('data:image/svg+xml;utf8,<svg width="10" height="10" xmlns="http://www.w3.org/2000/svg"><rect width="10" height="10" fill="none"/><circle cx="5" cy="5" r="1" fill="%231a120c"/></svg>'); opacity: 0.8; box-shadow: inset 0 0 10px rgba(0,0,0,0.8); }
-        
-        /* EMOJIS SHRINK TO FIT THE CELLS */
         .entity { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: calc(var(--cell-size) * 0.7); transition: all 0.1s ease; }
         
         .player { animation: walk 0.4s infinite alternate; z-index: 20; }
@@ -30,15 +31,12 @@
         .sparkle { animation: float 1s infinite alternate; z-index: 5; filter: drop-shadow(0 0 5px #ffd280); }
         @keyframes float { 0% { transform: translateY(0px); } 100% { transform: translateY(-5px); } }
 
-        /* MOBILE FIXES: Force everything to fit without scrolling */
         @media (max-width: 600px) {
-            :root { --cell-size: 26px; } /* Shrinks the grid massively for phones */
-            #maze-board { transform: none !important; margin-bottom: 10px !important; }
-            .game-instructions { margin-bottom: 10px; font-size: 13px; line-height: 1.2; }
+            :root { --cell-size: 26px; } 
+            #maze-board { transform: none !important; margin-bottom: 20px !important; }
+            .game-instructions { margin-bottom: 15px; font-size: 14px; line-height: 1.4; }
             .sys-display { margin-bottom: 10px; }
             h2 { margin-bottom: 5px; }
-            .mobile-dpad { margin: 10px auto 15px auto; }
-            .mobile-dpad button { width: 50px; height: 50px; }
         }
     </style>
 </head>
@@ -47,6 +45,7 @@
     <div class="game-wrapper">
         <div class="hud">
             <div id="status-display">Dunes: 1 / 4</div>
+            <div id="life-display">Lives: ❤️❤️</div>
             <div id="sparkles-display" style="color: #ffd280;">✨ 0 / 0</div>
             <div id="score-display">Score: 0</div>
             <div id="timer-display">Time: <span id="time-val" style="color: #fff;">60</span>s</div>
@@ -55,19 +54,12 @@
 
         <h2>The Shifting Sands</h2>
         <p class="game-instructions">
-            Use <strong>Arrow Keys</strong> or <strong>On-Screen D-Pad</strong>.<br>
+            Use <strong>Arrow Keys</strong> or <strong>Swipe</strong>.<br>
             Collect all the <span style="color: #ffd280; font-weight: bold;">✨</span> to unlock the Oasis (🌴).<br>
             <span style="color: var(--danger);">Avoid the patrolling Snakes (🐍)!</span>
         </p>
 
         <div id="maze-board"></div>
-
-        <div class="mobile-dpad">
-            <button id="btn-up">⬆️</button>
-            <button id="btn-left">⬅️</button>
-            <button id="btn-down">⬇️</button>
-            <button id="btn-right">➡️</button>
-        </div>
 
         <div class="controls">
             <button class="btn" onclick="location.reload()">Restart Level</button>
@@ -100,7 +92,6 @@
             activeItems = lvl.items.map(d => ({ ...d })); totalItems = activeItems.length;
             updateSparklesUI(); activeSnakes = lvl.snakes.map(s => ({ ...s }));
 
-            // GRID NOW USES THE CSS VARIABLE FOR SIZING
             $('#maze-board').css({ 'grid-template-columns': `repeat(${cols}, var(--cell-size))`, 'grid-template-rows': `repeat(${rows}, var(--cell-size))` }).empty();
             
             for (let r = 0; r < rows; r++) {
@@ -117,7 +108,7 @@
                 if(isDead) return;
                 timeLeft--; $('#time-val').text(timeLeft);
                 if (timeLeft <= 10) $('#time-val').css('color', 'var(--danger)');
-                if (timeLeft <= 0) { clearInterval(timerInterval); clearInterval(gameLoop); Session.failHeist(); }
+                if (timeLeft <= 0) { clearInterval(timerInterval); clearInterval(gameLoop); Session.loseLife(2); }
             }, 1000);
         }
 
@@ -181,21 +172,52 @@
                 isDead = true; clearInterval(gameLoop); clearInterval(timerInterval);
                 $('#sys-display').html(`<span style="color: var(--danger);">CAUGHT!</span>`);
                 $('#maze-board').addClass('death-flash'); $('#camel').html('☠️');
-                setTimeout(() => Session.failHeist(), 1000);
+                setTimeout(() => Session.loseLife(2), 1000);
             }
         }
-
-        $(document).ready(() => {
-            loadLevel(currentLvl);
-            $('#btn-up').click(() => simulateKey("ArrowUp"));
-            $('#btn-down').click(() => simulateKey("ArrowDown"));
-            $('#btn-left').click(() => simulateKey("ArrowLeft"));
-            $('#btn-right').click(() => simulateKey("ArrowRight"));
-        });
 
         function simulateKey(keyName) {
             let e = $.Event("keydown"); e.key = keyName; $(document).trigger(e);
         }
+
+        // --- NEW: TOUCH SWIPE LOGIC FOR MOBILE ---
+        let touchStartX = 0; let touchStartY = 0;
+
+        $(document).on('touchstart', '#maze-board', function(e) {
+            touchStartX = e.originalEvent.changedTouches[0].screenX;
+            touchStartY = e.originalEvent.changedTouches[0].screenY;
+        });
+
+        // We use touchmove to prevent the browser from scrolling the page
+        $(document).on('touchmove', '#maze-board', function(e) {
+            e.preventDefault(); 
+        });
+
+        $(document).on('touchend', '#maze-board', function(e) {
+            if (isDead || isMoving) return;
+            
+            let touchEndX = e.originalEvent.changedTouches[0].screenX;
+            let touchEndY = e.originalEvent.changedTouches[0].screenY;
+            
+            let swipeDistX = touchEndX - touchStartX;
+            let swipeDistY = touchEndY - touchStartY;
+            
+            // Require a minimum swipe distance (30 pixels) to avoid accidental taps
+            if (Math.abs(swipeDistX) < 30 && Math.abs(swipeDistY) < 30) return;
+
+            // Check if it was mostly a horizontal or vertical swipe
+            if (Math.abs(swipeDistX) > Math.abs(swipeDistY)) {
+                if (swipeDistX > 0) simulateKey("ArrowRight");
+                else simulateKey("ArrowLeft");
+            } else {
+                if (swipeDistY > 0) simulateKey("ArrowDown");
+                else simulateKey("ArrowUp");
+            }
+        });
+
+        $(document).ready(() => {
+            loadLevel(currentLvl);
+        });
     </script>
 </body>
 </html>
