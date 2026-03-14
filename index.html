@@ -19,12 +19,12 @@
         .click-indicator { position: absolute; bottom: 10px; right: 20px; font-size: 14px; opacity: 0.5; animation: blink 1s infinite alternate; }
         @keyframes blink { 0% { opacity: 0.2; } 100% { opacity: 0.8; } }
         
-        /* The new Skip Button styling */
+        /* UPDATED: Skip Button moved to bottom-left and made slightly smaller */
         #skip-btn {
-            position: absolute; top: 15px; right: 15px; background: transparent; 
+            position: absolute; bottom: 10px; left: 20px; background: transparent; 
             color: var(--primary); border: 1px solid var(--primary); border-radius: 4px; 
-            padding: 5px 10px; cursor: pointer; font-family: inherit; font-size: 12px; 
-            text-transform: uppercase; transition: 0.3s;
+            padding: 3px 8px; cursor: pointer; font-family: inherit; font-size: 11px; 
+            text-transform: uppercase; transition: 0.3s; z-index: 20;
         }
         #skip-btn:hover { background: var(--primary); color: #1a120c; }
 
@@ -104,22 +104,31 @@
         function runStory() {
             let storyLines = []; let nextAction = {};
 
+            // STAGE 1: Cipher
             if (currentStage === '1') {
                 storyLines = ["I finally made it inside the tent.", "The laser grid is active. One wrong move and the alarms will trigger.", "There's a terminal over there. I need to decrypt its cipher to get the map."];
                 nextAction = { text: "Access Terminal", url: `cipher.html?name=${encodeURIComponent(playerName)}&score=${playerScore}` };
+            
+            // STAGE 2: Mazes
             } else if (currentStage === '2') {
                 $('#inv-map').addClass('collected'); 
                 storyLines = ["Got the map! The coordinates point deep within the desert catacombs.", "I need to navigate the shifting sands to reach the vault entrance.", "I have to be fast... and avoid the snakes."];
                 nextAction = { text: "Enter the Dunes", url: `mazes.html?name=${encodeURIComponent(playerName)}&score=${playerScore}` };
+            
+            // STAGE 3: Memory
             } else if (currentStage === '3') {
                 $('#inv-map').addClass('collected'); $('#inv-key').addClass('collected'); 
                 storyLines = ["I made it through the sands and found the Vault Key.", "But the final door is sealed by an ancient digital lock.", "I need to repeat the heritage sequence perfectly to open it. One mistake and it resets."];
                 nextAction = { text: "Decode Sequence", url: `memory.html?name=${encodeURIComponent(playerName)}&score=${playerScore}` };
+            
+            // STAGE 4: Win
             } else if (currentStage === '4') {
                 $('#inv-map').addClass('collected'); $('#inv-key').addClass('collected'); 
                 setTimeout(() => $('#inv-diamond').addClass('collected'), 1000); 
                 storyLines = ["The sequence is accepted. The heavy stone doors are opening.", "There it is. The Desert Gem.", "The secrets of the sands are finally mine."];
                 nextAction = { text: "Complete Mission", url: "SHOW_SUCCESS" };
+            
+            // FAIL
             } else if (currentStage === 'fail') {
                 storyLines = ["WARNING: SYSTEM LOCKOUT.", "Security breach detected. Terminal Access Denied.", "The alarms have been triggered. I need to get out of here!"];
                 nextAction = { text: "View Mission Report", url: "SHOW_FAIL" };
@@ -127,7 +136,7 @@
 
             let currentLine = 0; 
             let isTyping = false;
-            let typingTimer; // We need to store the timer to stop it
+            let typingTimer; 
 
             function typeText(text) {
                 isTyping = true; $('#text-display').empty(); let i = 0;
@@ -140,7 +149,6 @@
                 }, 35); 
             }
 
-            // Function to show the final button when story ends
             function showNextAction() {
                 $('.click-indicator').hide();
                 $('#skip-btn').hide();
@@ -171,19 +179,21 @@
 
             typeText(storyLines[0]);
 
-            // SKIP ALL BUTTON LOGIC
+            // SKIP BUTTON CLICK
             $('#skip-btn').click(function(e) {
-                e.stopPropagation(); // Stop the dialogue box from registering the click
-                clearInterval(typingTimer); // Stop typing immediately
+                e.stopPropagation(); 
+                clearInterval(typingTimer); 
                 isTyping = false;
-                currentLine = storyLines.length - 1; // Jump to last line
-                $('#text-display').text(storyLines[currentLine]); // Show last line text
-                showNextAction(); // Show the launch button
+                currentLine = storyLines.length - 1; 
+                $('#text-display').text(storyLines[currentLine]); 
+                showNextAction(); 
             });
 
-            // DIALOGUE BOX CLICK LOGIC
-            $('#dialogue-box').click(function() {
-                // If it's currently typing, instantly finish the line!
+            // DIALOGUE BOX CLICK
+            $('#dialogue-box').click(function(e) {
+                // Ignore clicks if they click exactly on the skip button (prevents double firing)
+                if ($(e.target).is('#skip-btn')) return;
+
                 if (isTyping) {
                     clearInterval(typingTimer);
                     $('#text-display').text(storyLines[currentLine]);
