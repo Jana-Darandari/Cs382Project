@@ -45,7 +45,6 @@
     <div class="game-wrapper">
         <div class="hud">
             <div id="status-display">Dunes: 1 / 4</div>
-            <div id="life-display">Lives: ❤️❤️</div>
             <div id="sparkles-display" style="color: #ffd280;">✨ 0 / 0</div>
             <div id="score-display">Score: 0</div>
             <div id="timer-display">Time: <span id="time-val" style="color: #fff;">60</span>s</div>
@@ -108,7 +107,7 @@
                 if(isDead) return;
                 timeLeft--; $('#time-val').text(timeLeft);
                 if (timeLeft <= 10) $('#time-val').css('color', 'var(--danger)');
-                if (timeLeft <= 0) { clearInterval(timerInterval); clearInterval(gameLoop); Session.loseLife(2); }
+                if (timeLeft <= 0) { clearInterval(timerInterval); clearInterval(gameLoop); Session.failHeist(); }
             }, 1000);
         }
 
@@ -172,7 +171,9 @@
                 isDead = true; clearInterval(gameLoop); clearInterval(timerInterval);
                 $('#sys-display').html(`<span style="color: var(--danger);">CAUGHT!</span>`);
                 $('#maze-board').addClass('death-flash'); $('#camel').html('☠️');
-                setTimeout(() => Session.loseLife(2), 1000);
+                
+                // Fixed back to failHeist!
+                setTimeout(() => Session.failHeist(), 1000);
             }
         }
 
@@ -180,7 +181,7 @@
             let e = $.Event("keydown"); e.key = keyName; $(document).trigger(e);
         }
 
-        // --- NEW: TOUCH SWIPE LOGIC FOR MOBILE ---
+        // --- TOUCH SWIPE LOGIC FOR MOBILE ---
         let touchStartX = 0; let touchStartY = 0;
 
         $(document).on('touchstart', '#maze-board', function(e) {
